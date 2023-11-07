@@ -1,82 +1,55 @@
 mod game;
 mod utils;
 
-use game::event::{Event, Action};
+use game::event::{Action, Event};
 use game::player::Player;
-use rand::seq::SliceRandom;
-use utils::tree::NodePath;
+//use rand::seq::SliceRandom;
 use std::collections::HashMap;
+use std::io;
+use utils::tree::NodePath;
+
+use crate::utils::tree::Node;
 
 fn main() {
-    let mut rng = rand::thread_rng();
+    //let mut rng = rand::thread_rng();
 
-    let events: HashMap<&str, Event<'_>>;
-
-    let event = Event::new(
+    let mut event = &Event::new(
         "Hello, welcome to my game!",
         vec![
-            Action {
+            Action::new("", |_| const_nodepath!("")),
+            /*Action {
                 text: "",
-                event: &NodePath::new([""]),
-            }
+                action: |_player| { const P: NodePath<'_> = NodePath::new(&[""]); &P }
+            }*/
         ],
-        |_player| { true },
-        HashMap::from([
-            ("goblin", Event::new(
-                "A goblin appears!", 
-                vec![
-
-                ],
-                |_player| { true }, 
-                HashMap::from([])
-            ))
-        ]),
+        |_player| true,
+        HashMap::from([(
+            "goblin",
+            Event::new(
+                "A goblin appears!",
+                vec![],
+                |_player| true,
+                HashMap::from([]),
+            ),
+        )]),
     );
 
-    /*events = HashMap::from([
-        (
-            "",
-            Event::new(
-                "A goblin appears and does a silly dance",
-                |_player| {},
-                Vec::from([Action::new("Dance with them", |_player| -> &str {
-                    println!("DANCE PARTY");
-                    ""
-                })]),
-            ),
-        ),
-        (
-            "",
-            Event::new(
-                "An evil wizard appears",
-                |_player| {},
-                Vec::from([
-                    Action::new("Give him a warm and welcoming hug", |_player| -> &str {
-                        println!("he just needed affection");
-                        ""
-                    }),
-                    Action::new("MURFDER MRUEDER MUDEURFDER (drones)", |_player| -> &str {
-                        println!("thats not very pg-13");
-                        ""
-                    }),
-                ]),
-            ),
-        ),
-    ]);*/
-
-    
     let mut player = Player::new(50, 3, 10);
-    let mut current_event: &str = "";
 
     loop {
-        println!("{}", events[current_event].text());
+        // If event is not ok, continue
+        if !event.init(&mut player) {
+            continue;
+        }
 
-        for (index, action) in events[current_event].actions().iter().enumerate() {
+        // Print text and player actions
+        println!("{}", event.text());
+
+        for (index, action) in event.actions().iter().enumerate() {
             println!("({0}){1}", index + 1, action.text())
         }
 
-        events[current_event].init(&player);
-
+        // Get player input
         let mut action: String = String::new();
 
         io::stdin()
@@ -91,6 +64,12 @@ fn main() {
             Err(_) => continue,
         };
 
-        current_event = events[current_event].act(&mut player, action);
+        event = match event.get_node(match event.act(&mut player, action) {
+            Some(v) => v,
+            None => continue,
+        }) {
+            Some(v) => v,
+            None => continue,
+        }
     }
 }
