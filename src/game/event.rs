@@ -1,51 +1,65 @@
 use std::collections::HashMap;
-
-pub use super::player::Player;
+use crate::utils::tree::{Node, NodePath};
+use super::player::Player;
 
 #[derive(Clone, Copy)]
 pub struct Action<'a> {
-    text: &'a str,
-    action: fn(&mut Player) -> &'a str,
+    pub text: &'a str,
+    pub event: &'a NodePath<'a>,
 }
 
-impl<'a> Action<'a> {
-    pub fn new(text: &'a str, action: fn(&mut Player) -> &'a str) -> Action<'_> {
-        Self { text, action }
-    }
-
-    pub fn act(&self, player: &mut Player) -> &str {
-        (self.action)(player)
-    }
-}
-
-impl<'a> Action<'a> {
-    pub fn text(&self) -> &str {
-        self.text
-    }
-}
-
-#[derive(Clone)]
 pub struct Event<'a> {
     text: &'a str,
-    initialize: fn(&Player),
     actions: Vec<Action<'a>>,
+    initialize: fn(&mut Player) -> bool,
+
+    parent: Option<&'a Event<'a>>,
+    children: HashMap<&'a str, Event<'a>>,
 }
 
 impl<'a> Event<'a> {
-    pub fn new(text: &'a str, initialize: fn(&Player), actions: Vec<Action<'a>>) -> Self {
-        Self {
+    pub fn new(text: &str, actions: Vec<Action<'a>>, initialize: fn(&mut Player) -> bool, children: HashMap<&'a str, Event<'a>>) -> Self {
+        let this = Self {
+            text,
+            actions,
+            initialize,
+            parent: None,
+            children: children,
+        };
+
+        for (key, mut value) in children {
+            value.parent = Some(&this);
+        };
+
+        this
+    }
+}
+
+impl<'a> Node for Event<'a> {
+    fn parent(&self) -> Option<&Self> {
+        self.parent
+    }
+
+    fn children(&self) -> &HashMap<&str, Self> {
+        &self.children
+    }
+}
+/*
+impl<'a> Event<'a> {
+    pub fn new(text: &str, initialize: fn(&mut Player) -> bool, children: HashMap<&'a str, Event<'a>>) -> Self {
+        let this = Self {
             text,
             initialize,
-            actions,
-        }
-    }
 
-    pub fn init(&self, player: &Player) {
-        (self.initialize)(player);
-    }
+            parent: None,
+            children,
+        };
 
-    pub fn act(&self, player: &mut Player, action: usize) -> &str {
-        self.actions[action].act(player)
+        for (key, mut value) in children {
+            value.parent = Some(&this);
+        };
+
+        this
     }
 }
 
@@ -53,7 +67,16 @@ impl<'a> Event<'a> {
     pub fn text(&self) -> &str {
         self.text
     }
-    pub fn actions(&self) -> &Vec<Action<'a>> {
-        &self.actions
+
+    pub fn init(&self, player: &mut Player) -> bool {
+        (self.initialize)(player)
     }
-}
+
+    pub fn parent(&self) -> Option<&Event<'_>> {
+        self.parent
+    }
+    
+    pub fn children(&self) -> &HashMap<&'a str, Event<'a>> {
+        &self.children
+    }
+}*/

@@ -1,19 +1,39 @@
 mod game;
+mod utils;
 
-use game::event::{Action, Event};
+use game::event::{Event, Action};
 use game::player::Player;
-use rand::seq::{IteratorRandom, SliceRandom};
+use rand::seq::SliceRandom;
+use utils::tree::NodePath;
 use std::collections::HashMap;
-use std::hash::Hash;
-use std::ops::Add;
-use std::{hash, io};
 
 fn main() {
     let mut rng = rand::thread_rng();
 
     let events: HashMap<&str, Event<'_>>;
 
-    events = HashMap::from([
+    let event = Event::new(
+        "Hello, welcome to my game!",
+        vec![
+            Action {
+                text: "",
+                event: &NodePath::new([""]),
+            }
+        ],
+        |_player| { true },
+        HashMap::from([
+            ("goblin", Event::new(
+                "A goblin appears!", 
+                vec![
+
+                ],
+                |_player| { true }, 
+                HashMap::from([])
+            ))
+        ]),
+    );
+
+    /*events = HashMap::from([
         (
             "",
             Event::new(
@@ -42,8 +62,9 @@ fn main() {
                 ]),
             ),
         ),
-    ]);
+    ]);*/
 
+    
     let mut player = Player::new(50, 3, 10);
     let mut current_event: &str = "";
 
