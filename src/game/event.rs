@@ -10,10 +10,7 @@ pub struct Action<'a> {
 
 impl<'a> Action<'a> {
     pub fn new(text: &'a str, action: fn(&mut Player) -> &NodePath) -> Self {
-        Self {
-            text,
-            action,
-        }
+        Self { text, action }
     }
 
     pub fn text(&self) -> &str {

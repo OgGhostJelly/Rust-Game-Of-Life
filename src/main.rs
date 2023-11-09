@@ -16,7 +16,7 @@ fn main() {
     let mut event = &Event::new(
         "Hello, welcome to my game!",
         vec![
-            Action::new("", |_| const_nodepath!("")),
+            Action::new("", |_| { &["abc"] } ),
             /*Action {
                 text: "",
                 action: |_player| { const P: NodePath<'_> = NodePath::new(&[""]); &P }

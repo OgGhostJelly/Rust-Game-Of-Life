@@ -1,24 +1,35 @@
 use std::collections::HashMap;
 
-#[derive(Clone, Copy)]
-pub struct NodePath<'a> {
-    parts: &'a [&'a str],
-}
+// use traits and then paired with generics so functions still have sized return values
 
-impl<'a> NodePath<'a> {
-    pub const fn new(parts: &'a [&str]) -> Self {
-        Self { parts }
+#[derive(Clone, Copy)]
+pub struct NodePath<'a, const N: usize>([&'a str; N]);
+
+impl<'a, const N: usize> NodePath<'a, N> {
+    pub const fn new() -> Self {
+        Self([])
     }
 }
 
-#[macro_export]
-macro_rules! const_nodepath {
-    ( $( $x:expr ),+ ) => {
-        {
-            const P: NodePath<'_> = NodePath::new(&[$($x,)*]);
-            &P
-        }
-    };
+impl<'a, const N: usize> From<[&'a str; N]> for NodePath<'a, N> {
+    fn from(value: [&'a str; N]) -> Self {
+        Self(value)
+    }
+}
+
+impl<'a, const N: usize> From<Vec<&'a str>> for NodePath<'a, N> {
+    fn from(value: Vec<&'a str>) -> Self {
+        Self(value)
+    }
+}
+
+impl<'a, const N: usize> IntoIterator for NodePath<'a, N> {
+    type Item = &'a &'a str;
+    type IntoIter = std::slice::Iter<'a, &'a str>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
 }
 
 pub trait Node<'a>
@@ -36,10 +47,10 @@ where
         self.children().get(child)
     }
 
-    fn get_node(&self, path: &NodePath) -> Option<&Self> {
+    fn get_node<const N: usize>(&self, path: &NodePath<N>) -> Option<&Self> {
         let mut pointer = self;
 
-        for part in path.parts {
+        for part in path {
             pointer = match part {
                 &".." => match pointer.parent() {
                     Some(p) => p,
