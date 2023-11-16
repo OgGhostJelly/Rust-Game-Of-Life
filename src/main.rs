@@ -5,9 +5,8 @@ mod position;
 use game_context::GameContext;
 use grid::Grid;
 use position::{Position2D, ToPosition2D};
-use std::time::Instant;
+use std::{time::Instant, collections::HashSet};
 use sdl2::{self, keyboard::Keycode, pixels::Color, rect::Rect};
-use rand::Rng;
 
 fn main() {
     // Initialize the grid
@@ -15,6 +14,7 @@ fn main() {
     let mut grid = Grid::new([[false; GRID_SIZE[1]]; GRID_SIZE[0]]);
 
     // Set the rows to random stuff
+    use rand::Rng;
     for row in &mut grid {
         for tile in row {
             *tile = rand::thread_rng().gen_bool(0.5);
@@ -28,6 +28,11 @@ fn main() {
         }
     }
 
+    // Spawn blinker
+    //grid[0][1] = true;
+    //grid[1][1] = true;
+    //grid[2][1] = true;
+
     // Spawn in a glider
     grid[0][0] = true;
     grid[2][0] = true;
@@ -37,27 +42,36 @@ fn main() {
 
     // Spawn acorn
     //grid[0+15][1+15] = true;
-    //
     //grid[2+15][1+15] = true;
     //grid[2+15][0+15] = true;
-    //
     //grid[1+15][3+15] = true;
-    //
     //grid[2+15][4+15] = true;
     //grid[2+15][5+15] = true;
     //grid[2+15][6+15] = true;
 
     // Setup
     let mut c = GameContext::setup("Conway's Game Of Life - Rust SDL2");
-    let timestep_length_secs = 0.1;
+    let timestep_length_secs = 0.00000000001;
     let mut timestep = Instant::now();
     let mut camera_position: Position2D<f64> = [0.0, 0.0].into();
     let mut scale = [1.0, 1.0].to_pos2();
-    let mut next_update = Vec::new();
+    let mut queued_updates = HashSet::<(usize, usize)>::new();
 
     for (y, row) in grid.iter().enumerate() {
-        for (x, _) in row.iter().enumerate() {
-            next_update.push((y, x))
+        for (x, value) in row.iter().enumerate() {
+            match value {
+                true => {
+                    queued_updates.insert((y, x));
+
+                    for neighbour in grid.get_8_neighbours(y, x) {
+                        match neighbour {
+                            Some((pos, _)) => { queued_updates.insert(pos); },
+                            None => (),
+                        }
+                    }
+                },
+                false => (),
+            }
         }
     }
 
@@ -72,6 +86,8 @@ fn main() {
     ]);
     
     c.tick(|c| {
+        println!("Queued Updates (lag): {}", queued_updates.len());
+
         // Draw the background
         c.canvas.set_draw_color(Color::RGB(125, 125 ,125));
         c.canvas.clear();
@@ -126,35 +142,44 @@ fn main() {
 
         // time step/simulate game of life
         if timestep.elapsed().as_secs_f64() >= timestep_length_secs {
-            let mut changes: Vec<((usize, usize), bool)> = Vec::new();
+            let mut changes = Vec::new();
 
-            for (y, row) in grid.iter().enumerate() {
-                for (x, tile) in row.iter().enumerate() {
-                    let neighbour_count = grid.get_8_neighbours(y, x).iter().filter(|(pos, value)| match value {
-                        Some(value) => **value,
-                        None => false,
-                    }).count();
+            for (y, x) in queued_updates.iter() {
+                let (y, x) = (*y, *x);
+                
+                let neighbour_count = grid.get_8_neighbours(y, x).iter().filter(|value| match value {
+                    Some((_, value)) => **value,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+                    None => false,
+                }).count();
 
-                    let value = match tile {
-                        // Any live cell with fewer than two live neighbours dies, as if by underpopulation.
-                        true if neighbour_count < 2 => false,
-                        // Any live cell with more than three live neighbours dies, as if by overpopulation.
-                        true if neighbour_count > 3 => false,
-                        // Any live cell with two or three live neighbours lives on to the next generation.
-                        true => true,
-                        // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
-                        false if neighbour_count == 3 => true,
-                        // Any dead cell without exactly three live neighbours stays dead, as if by being dead.
-                        false => false,
-                    };
+                let value = match grid[y][x] {
+                    // Any live cell with fewer than two live neighbours dies, as if by underpopulation.
+                    true if neighbour_count < 2 => false,
+                    // Any live cell with more than three live neighbours dies, as if by overpopulation.
+                    true if neighbour_count > 3 => false,
+                    // Any live cell with two or three live neighbours lives on to the next generation.
+                    true => true,
+                    // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+                    false if neighbour_count == 3 => true,
+                    // Any dead cell without exactly three live neighbours stays dead, as if by being dead.
+                    false => false,
+                };
 
-                    if grid[y][x] != value {
-                        changes.push(((y, x), value));
-                    }
+                if grid[y][x] != value {
+                    changes.push(((y, x), value));
                 }
             }
 
+            queued_updates.clear();
+
             for ((y, x), value) in changes {
+                for neighbour in grid.get_8_neighbours(y, x) {
+                    match neighbour {
+                        Some(((y, x), _)) => { queued_updates.insert((y, x)); },
+                        None => (),
+                    }
+                }
+
                 grid[y][x] = value;
             }
 

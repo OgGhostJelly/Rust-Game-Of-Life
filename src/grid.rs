@@ -21,23 +21,26 @@ impl<const Y: usize, const X: usize, T> Grid<Y, X, T> {
         }
     }
 
-    pub fn get_8_neighbours(&self, y: usize, x: usize) -> [((isize, isize), Option<&T>); 8] {
-        let mut neighbours = [((0isize, 0isize), None); 8];
+    pub fn get_8_neighbours(&self, y: usize, x: usize) -> [Option<((usize, usize), &T)>; 8] {
+        let mut neighbours = [None; 8];
 
         const NEIGHBOURS: [(isize, isize); 8] = [
             (-1, -1), (-1,  0), (-1,  1),
             ( 0, -1),           ( 0,  1),
             ( 1, -1), ( 1,  0), ( 1,  1),
         ];
-
+        
         for (i, pos) in NEIGHBOURS.into_iter().enumerate() {
-            neighbours[i] = (pos, match y.checked_add_signed(pos.0) {
+            neighbours[i] = match y.checked_add_signed(pos.0) {
                 Some(y) => match x.checked_add_signed(pos.1) {
-                    Some(x) => self.get(y, x),
+                    Some(x) => match self.get(y, x) {
+                        Some(value) => Some(((y, x), value)),
+                        None => None,
+                    },
                     None => None,
                 },
                 None => None,
-            });
+            };
         }
 
         neighbours
