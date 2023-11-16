@@ -34,12 +34,12 @@ pub struct GameContext<'a> {
 /// Initialization and setup related impl
 impl GameContext<'_> {
     /// Sets up a window and game context.
-    pub fn setup(title: &str) -> Self {
+    pub fn setup(title: &str, width: u32, height: u32) -> Self {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
 
         let window = video_subsystem
-            .window(title, 800, 600)
+            .window(title, width, height)
             .position_centered()
             .build()
             .unwrap();

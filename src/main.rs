@@ -51,8 +51,8 @@ fn main() {
     //grid[2+15][6+15] = true;
 
     // Setup
-    let mut c = GameContext::setup("Conway's Game Of Life - Rust SDL2");
-    let timestep_length_secs = 0.25;
+    let mut c = GameContext::setup("Conway's Game Of Life - Rust SDL2", 800, 600);
+    let timestep_length_secs = 0.000001;
     let mut timestep = Instant::now();
     let mut camera_position: Position2D<f64> = [0.0, 0.0].into();
     let mut scale = [1.0, 1.0].to_pos2();
@@ -87,8 +87,6 @@ fn main() {
     ]);
     
     c.tick(|c| {
-        println!("Queued Updates (lag): {}", queued_updates.len());
-
         // Draw the background
         c.canvas.set_draw_color(Color::RGB(125, 125 ,125));
         c.canvas.clear();
@@ -118,33 +116,36 @@ fn main() {
             scale -= [1.0, 1.0].to_pos2() * c.delta.elapsed().as_secs_f64()
         }
 
-        // Draw the grid
-        for (y, row) in (&grid).into_iter().enumerate() {
-            for (x, tile) in row.iter().enumerate() {
-                c.canvas.set_draw_color(match tile {
-                    true => Color::WHITE,
-                    false => Color::BLACK,
-                });
-
+        let draws: Vec<_> = (&grid).into_iter().enumerate().par_bridge().map(|(y, row)| {
+            row.iter().enumerate().par_bridge().filter_map(move |(x, tile)| {
                 let size = [50.0, 50.0].to_pos2();
-                //let offset = [25.0, 25.0].to_pos2();
-                let pos: Position2D<f64> = [x, y].to_pos2().into();
+                let position = <Position2D<usize> as Into<Position2D<f64>>>::into([x, y].to_pos2()) * size * scale;
+                let draw_position = position - camera_position.clone();
+                
+                if draw_position.x() > 850.0 || draw_position.y() > 650.0 {
+                    return None;
+                }
 
                 let rect_size: Position2D<u32> = (size * scale).into();
-                
-                let position = pos * (size/* + offset*/) * scale; // [x as f64 * 75.0, y as f64 * 75.0].to_pos2() * 1.0;
-                let _ = c.canvas.fill_rect(Rect::from_center(
-                    position - camera_position.clone(),
+
+                Some((match tile {
+                    true => Color::WHITE,
+                    false => Color::BLACK,
+                }, Rect::from_center(
+                    draw_position,
                     rect_size.x() + 1,
                     rect_size.y() + 1,
-                ));
-            }
+                )))
+            })
+        }).flatten().collect();
+
+        for (color, rect) in draws.iter() {
+            c.canvas.set_draw_color(*color);
+            let _ = c.canvas.fill_rect(*rect);
         }
 
         // time step/simulate game of life
         if timestep.elapsed().as_secs_f64() >= timestep_length_secs {
-            let timer = Instant::now();
-
             let changes: Vec<_> = queued_updates.par_iter().map(|(y, x)| {
                 let (y, x) = (*y, *x);
                 
@@ -195,8 +196,6 @@ fn main() {
 
                 grid[y][x] = value;
             }
-
-            println!("{}", timer.elapsed().as_secs_f64());
 
             timestep = Instant::now();
         }

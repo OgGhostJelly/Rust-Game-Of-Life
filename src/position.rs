@@ -138,7 +138,7 @@ impl<T> Position2D<T> {
     }
 
     pub fn y(self) -> T where T: Copy {
-        self.0[0]
+        self.0[1]
     }
 
     pub fn unwrap(self) -> Vector2<T> {
