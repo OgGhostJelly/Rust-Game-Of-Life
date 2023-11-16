@@ -7,10 +7,11 @@ use grid::Grid;
 use position::{Position2D, ToPosition2D};
 use std::{time::Instant, collections::HashSet};
 use sdl2::{self, keyboard::Keycode, pixels::Color, rect::Rect};
+use rayon::prelude::*;
 
 fn main() {
     // Initialize the grid
-    const GRID_SIZE: [usize; 2] = [200, 200];
+    const GRID_SIZE: [usize; 2] = [500, 500];
     let mut grid = Grid::new([[false; GRID_SIZE[1]]; GRID_SIZE[0]]);
 
     // Set the rows to random stuff
@@ -51,7 +52,7 @@ fn main() {
 
     // Setup
     let mut c = GameContext::setup("Conway's Game Of Life - Rust SDL2");
-    let timestep_length_secs = 0.00000000001;
+    let timestep_length_secs = 0.25;
     let mut timestep = Instant::now();
     let mut camera_position: Position2D<f64> = [0.0, 0.0].into();
     let mut scale = [1.0, 1.0].to_pos2();
@@ -142,9 +143,9 @@ fn main() {
 
         // time step/simulate game of life
         if timestep.elapsed().as_secs_f64() >= timestep_length_secs {
-            let mut changes = Vec::new();
+            let timer = Instant::now();
 
-            for (y, x) in queued_updates.iter() {
+            let changes: Vec<_> = queued_updates.par_iter().map(|(y, x)| {
                 let (y, x) = (*y, *x);
                 
                 let neighbour_count = grid.get_8_neighbours(y, x).iter().filter(|value| match value {
@@ -166,9 +167,21 @@ fn main() {
                 };
 
                 if grid[y][x] != value {
-                    changes.push(((y, x), value));
+                    Some(((y, x), value))
+                } else {
+                    None
                 }
-            }
+            }).filter(|value| {
+                match value {
+                    Some(_) => true,
+                    None => false,
+                }
+            }).map(|value| {
+                match value {
+                    Some(value) => value,
+                    None => unreachable!("We filtered out all `None` values so this shouldn't be possible"),
+                }
+            }).collect();
 
             queued_updates.clear();
 
@@ -182,6 +195,8 @@ fn main() {
 
                 grid[y][x] = value;
             }
+
+            println!("{}", timer.elapsed().as_secs_f64());
 
             timestep = Instant::now();
         }
