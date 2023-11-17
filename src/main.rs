@@ -11,7 +11,7 @@ use rayon::prelude::*;
 
 fn main() {
     // Initialize the grid
-    const GRID_SIZE: [usize; 2] = [500, 500];
+    const GRID_SIZE: [usize; 2] = [250, 250];
     let mut grid = Grid::new([[false; GRID_SIZE[1]]; GRID_SIZE[0]]);
 
     // Set the rows to random stuff
@@ -29,11 +29,6 @@ fn main() {
         }
     }
 
-    // Spawn blinker
-    //grid[0][1] = true;
-    //grid[1][1] = true;
-    //grid[2][1] = true;
-
     // Spawn in a glider
     grid[0][0] = true;
     grid[2][0] = true;
@@ -41,18 +36,9 @@ fn main() {
     grid[1][2] = true;
     grid[2][1] = true;
 
-    // Spawn acorn
-    //grid[0+15][1+15] = true;
-    //grid[2+15][1+15] = true;
-    //grid[2+15][0+15] = true;
-    //grid[1+15][3+15] = true;
-    //grid[2+15][4+15] = true;
-    //grid[2+15][5+15] = true;
-    //grid[2+15][6+15] = true;
-
     // Setup
     let mut c = GameContext::setup("Conway's Game Of Life - Rust SDL2", 800, 600);
-    let timestep_length_secs = 0.000001;
+    let timestep_length_secs = 0.1;
     let mut timestep = Instant::now();
     let mut camera_position: Position2D<f64> = [0.0, 0.0].into();
     let mut scale = [1.0, 1.0].to_pos2();
@@ -121,7 +107,7 @@ fn main() {
                 let size = [50.0, 50.0].to_pos2();
                 let position = <Position2D<usize> as Into<Position2D<f64>>>::into([x, y].to_pos2()) * size * scale;
                 let draw_position = position - camera_position.clone();
-                
+
                 if draw_position.x() > 850.0 || draw_position.y() > 650.0 {
                     return None;
                 }
@@ -146,6 +132,9 @@ fn main() {
 
         // time step/simulate game of life
         if timestep.elapsed().as_secs_f64() >= timestep_length_secs {
+            let processing_timer = Instant::now();
+            let updates_count = queued_updates.len();
+
             let changes: Vec<_> = queued_updates.par_iter().map(|(y, x)| {
                 let (y, x) = (*y, *x);
                 
@@ -196,6 +185,8 @@ fn main() {
 
                 grid[y][x] = value;
             }
+
+            println!("Simulation updated {} tiles in {}s.", updates_count, processing_timer.elapsed().as_secs_f64());
 
             timestep = Instant::now();
         }
