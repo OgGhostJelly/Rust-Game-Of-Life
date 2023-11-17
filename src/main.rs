@@ -74,7 +74,7 @@ fn main() {
     
     c.tick(|c| {
         // Draw the background
-        c.canvas.set_draw_color(Color::RGB(125, 125 ,125));
+        c.canvas.set_draw_color(Color::BLACK);
         c.canvas.clear();
 
         // Move the camera
@@ -102,8 +102,23 @@ fn main() {
             scale -= [1.0, 1.0].to_pos2() * c.delta.elapsed().as_secs_f64()
         }
 
+        println!("({}, {})", scale.x(), scale.y());
+
+        c.canvas.set_draw_color(Color::GREY);
+        _ = c.canvas.draw_rect(Rect::new(
+            -camera_position.x() as i32 - 25, 
+            -camera_position.y() as i32 - 25, 
+            ((50.0 * scale.x() * 250.0) + 25.0) as u32,
+            ((50.0 * scale.y() * 250.0) + 25.0) as u32,
+        ));
+
         let draws: Vec<_> = (&grid).into_iter().enumerate().par_bridge().map(|(y, row)| {
             row.iter().enumerate().par_bridge().filter_map(move |(x, tile)| {
+                match tile {
+                    true => (),
+                    false => return None,
+                }
+                
                 let size = [50.0, 50.0].to_pos2();
                 let position = <Position2D<usize> as Into<Position2D<f64>>>::into([x, y].to_pos2()) * size * scale;
                 let draw_position = position - camera_position.clone();
@@ -114,10 +129,7 @@ fn main() {
 
                 let rect_size: Position2D<u32> = (size * scale).into();
 
-                Some((match tile {
-                    true => Color::WHITE,
-                    false => Color::BLACK,
-                }, Rect::from_center(
+                Some((Color::WHITE, Rect::from_center(
                     draw_position,
                     rect_size.x() + 1,
                     rect_size.y() + 1,
