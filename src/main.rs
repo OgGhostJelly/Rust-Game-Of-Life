@@ -1,8 +1,8 @@
-use std::time::{Duration, Instant};
+use std::{sync::Arc, time::{Duration, Instant}};
 
 use board::Board;
 use colored::Colorize;
-use game_context::GameContext;
+use game_context::RenderContext;
 use rand::thread_rng;
 use sdl2::event::Event;
 
@@ -28,9 +28,24 @@ fn main() -> Result<(), String> {
 
     // Initialize Game
 
-    let board: Board::<250, 250> = Board::rand(&mut thread_rng(), 0.5);
-    let mut game_context = GameContext::new(board);
-    
+    let mut board = Board::<1000, 1000>::rand(&mut thread_rng(), 0.5);
+    let draw_board = Arc::new(std::sync::Mutex::new(board.clone()));
+    let draw_board_ref = draw_board.clone();
+
+    std::thread::spawn(move || {
+        loop {
+            let old_board = board;
+            board = old_board.tick();
+            
+            let mut cached_board = draw_board_ref.lock().unwrap();
+            *cached_board = old_board;
+            drop(cached_board);
+
+            ::std::thread::sleep(Duration::from_nanos(16000000));
+        }
+    });
+
+    let mut game_context = RenderContext::new();
     let mut event_pump = sdl_context.event_pump()?;
     let mut last_update: Instant = Instant::now();
 
@@ -53,14 +68,9 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(game_context.background_color());
         canvas.clear();
 
-        game_context.draw(&mut canvas);
-
-        // Cap framerate to 16ms or 60fps
-        let frame_time = Duration::from_nanos(16000000);
-        let excess = frame_time.checked_sub(delta);
-        if let Some(excess) = excess {
-            ::std::thread::sleep(excess)
-        }
+        let board = draw_board.lock().unwrap();
+        game_context.draw(&*board, &mut canvas);
+        drop(board);
 
         canvas.present();
     }

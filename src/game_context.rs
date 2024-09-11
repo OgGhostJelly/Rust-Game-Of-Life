@@ -9,7 +9,6 @@ pub trait GameOfLifeBoard {
     fn alive_cells(&self) -> impl Iterator<Item = (usize, usize)>;
     fn width(&self) -> usize;
     fn height(&self) -> usize;
-    fn tick(self) -> Self;
 }
 
 impl<const WIDTH: usize, const HEIGHT: usize> GameOfLifeBoard for board::Board<WIDTH, HEIGHT> {
@@ -24,23 +23,17 @@ impl<const WIDTH: usize, const HEIGHT: usize> GameOfLifeBoard for board::Board<W
     fn height(&self) -> usize {
         HEIGHT
     }
-    
-    fn tick(self) -> Self {
-        self.tick()
-    }
 }
 
-pub struct GameContext<B: GameOfLifeBoard> {
+pub struct RenderContext {
     camera: Camera,
-    board: B,
     key_presses: HashSet<Keycode>,
 }
 
-impl<B: GameOfLifeBoard> GameContext<B> {
-    pub fn new(board: B) -> Self {
+impl RenderContext {
+    pub fn new() -> Self {
         Self {
             camera: Camera::default(),
-            board,
             key_presses: HashSet::default(),
         }
     }
@@ -48,7 +41,6 @@ impl<B: GameOfLifeBoard> GameContext<B> {
     pub fn tick(mut self, delta: Duration) -> Self {
         self.move_camera(delta);
         self.scale_camera(delta);
-        self.board = self.board.tick();
         self
     }
 
@@ -116,9 +108,9 @@ impl<B: GameOfLifeBoard> GameContext<B> {
         }
     }
 
-    pub fn world_to_screen(&self, canvas: &WindowCanvas, x: f32, y: f32) -> (f32, f32) {
-        let center_grid_x = self.board.width() as f32 / 2.0;
-        let center_grid_y = self.board.height() as f32 / 2.0;
+    pub fn world_to_screen<B: GameOfLifeBoard>(&self, board: &B, canvas: &WindowCanvas, x: f32, y: f32) -> (f32, f32) {
+        let center_grid_x = board.width() as f32 / 2.0;
+        let center_grid_y = board.height() as f32 / 2.0;
 
         let (center_canvas_x, center_canvas_y) = match canvas.output_size() {
             Ok((x, y)) => (x, y),
@@ -140,19 +132,19 @@ impl<B: GameOfLifeBoard> GameContext<B> {
         )
     }
 
-    pub fn tile_to_screen_rect(&self, canvas: &WindowCanvas, x: usize, y: usize) -> FRect {
-        let (x, y) = self.world_to_screen(canvas, x as f32, y as f32);
+    pub fn tile_to_screen_rect<B: GameOfLifeBoard>(&self, board: &B, canvas: &WindowCanvas, x: usize, y: usize) -> FRect {
+        let (x, y) = self.world_to_screen(board, canvas, x as f32, y as f32);
         FRect::new(x, y, 1.0, 1.0)
     }
 
-    pub fn tile_to_screen_point(&self, canvas: &WindowCanvas, x: usize, y: usize) -> FPoint {
-        let (x, y) = self.world_to_screen(canvas, x as f32, y as f32);
+    pub fn tile_to_screen_point<B: GameOfLifeBoard>(&self, board: &B, canvas: &WindowCanvas, x: usize, y: usize) -> FPoint {
+        let (x, y) = self.world_to_screen(board, canvas, x as f32, y as f32);
         FPoint::new(x, y)
     }
 
-    pub fn draw_border(&self, canvas: &mut WindowCanvas) {
-        let top_left = self.tile_to_screen_point(canvas, 0, 0);
-        let bottom_right = self.tile_to_screen_point(canvas, self.board.width(), self.board.height());
+    pub fn draw_border<B: GameOfLifeBoard>(&self, board: &B, canvas: &mut WindowCanvas) {
+        let top_left = self.tile_to_screen_point(board, canvas, 0, 0);
+        let bottom_right = self.tile_to_screen_point(board, canvas, board.width(), board.height());
         let top_right = FPoint::new(bottom_right.x, top_left.y);
         let bottom_left = FPoint::new(top_left.x, bottom_right.y);
 
@@ -166,15 +158,15 @@ impl<B: GameOfLifeBoard> GameContext<B> {
         ].as_slice());
     }
 
-    pub fn draw(&self, canvas: &mut WindowCanvas) {
+    pub fn draw<B: GameOfLifeBoard>(&self, board: &B, canvas: &mut WindowCanvas) {
         let scale = 2.0f32.powf(self.camera.scale);
         let _ = canvas.set_scale(scale, scale);
 
-        self.draw_border(canvas);
+        self.draw_border(board, canvas);
 
-        for (x, y) in self.board.alive_cells() {
+        for (x, y) in board.alive_cells() {
             canvas.set_draw_color(Color::WHITE);            
-            let ret = canvas.draw_frect(self.tile_to_screen_rect(canvas, x, y));
+            let ret = canvas.draw_frect(self.tile_to_screen_rect(board, canvas, x, y));
             #[cfg(debug_assertions)]
             if let Err(e) = ret {
                 eprintln!("{}", format!("WARN: failed to draw tile ({x}, {y}): {e}").yellow())

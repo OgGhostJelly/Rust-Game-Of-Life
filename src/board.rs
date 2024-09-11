@@ -4,14 +4,14 @@ use rand::{rngs::ThreadRng, Rng};
 
 #[derive(Clone)]
 pub struct Board<const WIDTH: usize, const HEIGHT: usize> {
-    cells: [[Cell; WIDTH]; HEIGHT],
+    cells: Box<[[Cell; WIDTH]; HEIGHT]>,
     alive_cells: Vec<(usize, usize)>,
 }
 
 impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
     pub fn new() -> Self {
         Self {
-            cells: [[Cell::empty(); WIDTH]; HEIGHT],
+            cells: Box::new([[Cell::empty(); WIDTH]; HEIGHT]),
             alive_cells: Vec::new(),
         }
     }
@@ -34,14 +34,14 @@ impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
 
     pub fn with_alive_capacity(capacity: usize) -> Self {
         Self {
-            cells: [[Cell::empty(); WIDTH]; HEIGHT],
+            cells: Box::new([[Cell::empty(); WIDTH]; HEIGHT]),
             alive_cells: Vec::with_capacity(capacity),
         }
     }
 
     pub fn full() -> Self {
         Self {
-            cells: [[Cell::new(true, 8); WIDTH]; HEIGHT],
+            cells: Box::new([[Cell::new(true, 8); WIDTH]; HEIGHT]),
             alive_cells: (0..HEIGHT).map(|y| (0..WIDTH).map(move |x| (x, y))).flatten().collect(),
         }
     }
@@ -68,10 +68,10 @@ impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
         &self.alive_cells
     }
     
-    pub fn tick(self) -> Self {
+    pub fn tick(&self) -> Self {
         let mut board = Self::with_alive_capacity(self.alive_cells.len());
 
-        for (x, y) in self.alive_cells.into_iter() {
+        for (x, y) in self.alive_cells.iter().cloned() {
             if self.cells[y][x].next_alive_state() {
                 board.make_alive(x, y);
             }
@@ -143,7 +143,7 @@ impl<const WIDTH: usize, const HEIGHT: usize> PartialEq for Board<WIDTH, HEIGHT>
 
 impl<const WIDTH: usize, const HEIGHT: usize> fmt::Debug for Board<WIDTH, HEIGHT> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for row in &self.cells {
+        for row in self.cells.iter() {
             f.write_char('\n')?;
 
             for cell in row {
@@ -424,7 +424,7 @@ mod tests {
 
             let expected: Board<W, H> = Board::from_cells(next);
 
-            for row in &board.cells {
+            for row in board.cells.iter() {
                 print!("[");
 
                 for cell in row {
@@ -441,7 +441,7 @@ mod tests {
 
             println!("----");
 
-            for row in &expected.cells {
+            for row in expected.cells.iter() {
                 print!("[");
 
                 for cell in row {
