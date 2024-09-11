@@ -3,15 +3,15 @@ use std::{collections::HashSet, fmt::{self, Write}};
 use rand::{rngs::ThreadRng, Rng};
 
 #[derive(Clone)]
-pub struct Board<const W: usize, const H: usize> {
-    cells: [[Cell; W]; H],
+pub struct Board<const WIDTH: usize, const HEIGHT: usize> {
+    cells: [[Cell; WIDTH]; HEIGHT],
     alive_cells: Vec<(usize, usize)>,
 }
 
-impl<const W: usize, const H: usize> Board<W, H> {
+impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
     pub fn new() -> Self {
         Self {
-            cells: [[Cell::empty(); W]; H],
+            cells: [[Cell::empty(); WIDTH]; HEIGHT],
             alive_cells: Vec::new(),
         }
     }
@@ -34,23 +34,23 @@ impl<const W: usize, const H: usize> Board<W, H> {
 
     pub fn with_alive_capacity(capacity: usize) -> Self {
         Self {
-            cells: [[Cell::empty(); W]; H],
+            cells: [[Cell::empty(); WIDTH]; HEIGHT],
             alive_cells: Vec::with_capacity(capacity),
         }
     }
 
     pub fn full() -> Self {
         Self {
-            cells: [[Cell::new(true, 8); W]; H],
-            alive_cells: (0..H).map(|y| (0..W).map(move |x| (x, y))).flatten().collect(),
+            cells: [[Cell::new(true, 8); WIDTH]; HEIGHT],
+            alive_cells: (0..HEIGHT).map(|y| (0..WIDTH).map(move |x| (x, y))).flatten().collect(),
         }
     }
 
     pub fn rand(rng: &mut ThreadRng, p: f64) -> Self {
-        let mut board = Self::with_alive_capacity((H * W) / 2);
+        let mut board = Self::with_alive_capacity((HEIGHT * WIDTH) / 2);
 
-        for y in 0..H {
-            for x in 0..W {
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
                 if rng.gen_bool(p) {
                     board.make_alive(x, y);
                 }
@@ -60,8 +60,12 @@ impl<const W: usize, const H: usize> Board<W, H> {
         board
     }
 
-    pub fn cells(&self) -> &[[Cell; W]; H] {
+    pub fn cells(&self) -> &[[Cell; WIDTH]; HEIGHT] {
         &self.cells
+    }
+
+    pub fn alive_cells(&self) -> &Vec<(usize, usize)> {
+        &self.alive_cells
     }
     
     pub fn tick(self) -> Self {
@@ -73,7 +77,7 @@ impl<const W: usize, const H: usize> Board<W, H> {
             }
             
             for (x, y) in get_adjacents(x, y) {
-                if x >= W || y >= H {
+                if x >= WIDTH || y >= HEIGHT {
                     continue;
                 }
 
@@ -94,7 +98,7 @@ impl<const W: usize, const H: usize> Board<W, H> {
 
     fn propagate_neighbours(&mut self, x: usize, y: usize) {
         for (other_x, other_y) in get_adjacents(x, y) {
-            if other_x >= W || other_y >= H {
+            if other_x >= WIDTH || other_y >= HEIGHT {
                 continue;
             }
 
@@ -103,7 +107,7 @@ impl<const W: usize, const H: usize> Board<W, H> {
     }
 }
 
-impl<const W: usize, const H: usize> PartialEq for Board<W, H> {
+impl<const WIDTH: usize, const HEIGHT: usize> PartialEq for Board<WIDTH, HEIGHT> {
     fn eq(&self, other: &Self) -> bool {
         if self.alive_cells.len() != other.alive_cells.len() {
             return false;
@@ -137,7 +141,7 @@ impl<const W: usize, const H: usize> PartialEq for Board<W, H> {
     }
 }
 
-impl<const W: usize, const H: usize> fmt::Debug for Board<W, H> {
+impl<const WIDTH: usize, const HEIGHT: usize> fmt::Debug for Board<WIDTH, HEIGHT> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for row in &self.cells {
             f.write_char('\n')?;
