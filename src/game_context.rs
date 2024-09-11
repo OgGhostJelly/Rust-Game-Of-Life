@@ -1,7 +1,13 @@
 use std::{collections::HashSet, time::Duration};
 
 use colored::Colorize;
-use sdl2::{event::Event, keyboard::Keycode, pixels::Color, rect::{FPoint, FRect}, render::WindowCanvas};
+use sdl2::{
+    event::Event,
+    keyboard::Keycode,
+    pixels::Color,
+    rect::{FPoint, FRect},
+    render::WindowCanvas,
+};
 
 use crate::board;
 
@@ -86,38 +92,52 @@ impl RenderContext {
     }
 
     pub fn any_key_pressed(&self, keycodes: &[&Keycode]) -> bool {
-        keycodes.into_iter()
+        keycodes
+            .into_iter()
             .any(|keycode| self.is_key_pressed(keycode))
     }
 
     pub fn handle_event(&mut self, event: Event) {
         match event {
-            Event::KeyDown { keycode, keymod, .. } if keymod.is_empty() => match keycode {
+            Event::KeyDown {
+                keycode, keymod, ..
+            } if keymod.is_empty() => match keycode {
                 Some(keycode) => {
                     self.key_presses.insert(keycode);
-                },
+                }
                 None => (),
             },
-            Event::KeyUp { keycode, keymod, .. } if keymod.is_empty() => match keycode {
+            Event::KeyUp {
+                keycode, keymod, ..
+            } if keymod.is_empty() => match keycode {
                 Some(keycode) => {
                     self.key_presses.remove(&keycode);
-                },
+                }
                 None => (),
             },
-            _ => ()
+            _ => (),
         }
     }
 
-    pub fn world_to_screen<B: GameOfLifeBoard>(&self, board: &B, canvas: &WindowCanvas, x: f32, y: f32) -> (f32, f32) {
+    pub fn world_to_screen<B: GameOfLifeBoard>(
+        &self,
+        board: &B,
+        canvas: &WindowCanvas,
+        x: f32,
+        y: f32,
+    ) -> (f32, f32) {
         let center_grid_x = board.width() as f32 / 2.0;
         let center_grid_y = board.height() as f32 / 2.0;
 
         let (center_canvas_x, center_canvas_y) = match canvas.output_size() {
             Ok((x, y)) => (x, y),
             Err(e) => {
-                eprintln!("{}", format!("WARN: error when getting `canvas.output_size`: {e}").yellow());
-                return (0.0, 0.0)
-            },
+                eprintln!(
+                    "{}",
+                    format!("WARN: error when getting `canvas.output_size`: {e}").yellow()
+                );
+                return (0.0, 0.0);
+            }
         };
 
         let scale = 2.0f32.powf(self.camera.scale);
@@ -132,12 +152,24 @@ impl RenderContext {
         )
     }
 
-    pub fn tile_to_screen_rect<B: GameOfLifeBoard>(&self, board: &B, canvas: &WindowCanvas, x: usize, y: usize) -> FRect {
+    pub fn tile_to_screen_rect<B: GameOfLifeBoard>(
+        &self,
+        board: &B,
+        canvas: &WindowCanvas,
+        x: usize,
+        y: usize,
+    ) -> FRect {
         let (x, y) = self.world_to_screen(board, canvas, x as f32, y as f32);
         FRect::new(x, y, 1.0, 1.0)
     }
 
-    pub fn tile_to_screen_point<B: GameOfLifeBoard>(&self, board: &B, canvas: &WindowCanvas, x: usize, y: usize) -> FPoint {
+    pub fn tile_to_screen_point<B: GameOfLifeBoard>(
+        &self,
+        board: &B,
+        canvas: &WindowCanvas,
+        x: usize,
+        y: usize,
+    ) -> FPoint {
         let (x, y) = self.world_to_screen(board, canvas, x as f32, y as f32);
         FPoint::new(x, y)
     }
@@ -149,13 +181,8 @@ impl RenderContext {
         let bottom_left = FPoint::new(top_left.x, bottom_right.y);
 
         canvas.set_draw_color(Color::WHITE);
-        let _ = canvas.draw_flines([
-            top_left,
-            top_right,
-            bottom_right,
-            bottom_left,
-            top_left,
-        ].as_slice());
+        let _ = canvas
+            .draw_flines([top_left, top_right, bottom_right, bottom_left, top_left].as_slice());
     }
 
     pub fn draw<B: GameOfLifeBoard>(&self, board: &B, canvas: &mut WindowCanvas) {
@@ -165,11 +192,14 @@ impl RenderContext {
         self.draw_border(board, canvas);
 
         for (x, y) in board.alive_cells() {
-            canvas.set_draw_color(Color::WHITE);            
+            canvas.set_draw_color(Color::WHITE);
             let ret = canvas.draw_frect(self.tile_to_screen_rect(board, canvas, x, y));
             #[cfg(debug_assertions)]
             if let Err(e) = ret {
-                eprintln!("{}", format!("WARN: failed to draw tile ({x}, {y}): {e}").yellow())
+                eprintln!(
+                    "{}",
+                    format!("WARN: failed to draw tile ({x}, {y}): {e}").yellow()
+                )
             }
         }
     }
@@ -193,6 +223,9 @@ impl Camera {
 
 impl Default for Camera {
     fn default() -> Self {
-        Self { position: (0.0, 0.0), scale: 0.0 }
+        Self {
+            position: (0.0, 0.0),
+            scale: 0.0,
+        }
     }
 }

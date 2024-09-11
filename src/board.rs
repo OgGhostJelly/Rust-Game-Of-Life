@@ -1,4 +1,7 @@
-use std::{collections::HashSet, fmt::{self, Write}};
+use std::{
+    collections::HashSet,
+    fmt::{self, Write},
+};
 
 use rand::{rngs::ThreadRng, Rng};
 
@@ -27,8 +30,6 @@ impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
             }
         }
 
-
-
         board
     }
 
@@ -42,7 +43,10 @@ impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
     pub fn full() -> Self {
         Self {
             cells: Box::new([[Cell::new(true, 8); WIDTH]; HEIGHT]),
-            alive_cells: (0..HEIGHT).map(|y| (0..WIDTH).map(move |x| (x, y))).flatten().collect(),
+            alive_cells: (0..HEIGHT)
+                .map(|y| (0..WIDTH).map(move |x| (x, y)))
+                .flatten()
+                .collect(),
         }
     }
 
@@ -67,7 +71,7 @@ impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
     pub fn alive_cells(&self) -> &Vec<(usize, usize)> {
         &self.alive_cells
     }
-    
+
     pub fn tick(&self) -> Self {
         let mut board = Self::with_alive_capacity(self.alive_cells.len());
 
@@ -75,13 +79,16 @@ impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
             if self.cells[y][x].next_alive_state() {
                 board.make_alive(x, y);
             }
-            
+
             for (x, y) in get_adjacents(x, y) {
                 if x >= WIDTH || y >= HEIGHT {
                     continue;
                 }
 
-                if self.cells[y][x].is_dead() && board.cells[y][x].is_dead() && self.cells[y][x].next_dead_state() {
+                if self.cells[y][x].is_dead()
+                    && board.cells[y][x].is_dead()
+                    && self.cells[y][x].next_dead_state()
+                {
                     board.make_alive(x, y);
                 }
             }
@@ -112,7 +119,7 @@ impl<const WIDTH: usize, const HEIGHT: usize> PartialEq for Board<WIDTH, HEIGHT>
         if self.alive_cells.len() != other.alive_cells.len() {
             return false;
         }
-        
+
         let map: HashSet<&(usize, usize)> = HashSet::from_iter(self.alive_cells.iter());
 
         for key in &other.alive_cells {
@@ -125,17 +132,15 @@ impl<const WIDTH: usize, const HEIGHT: usize> PartialEq for Board<WIDTH, HEIGHT>
             return false;
         }
 
-        self.cells.iter()
+        self.cells
+            .iter()
             .zip(other.cells.iter())
             .map(|(a, b)| {
                 if a.len() != b.len() {
                     return false;
                 }
 
-                a.iter()
-                    .zip(b.iter())
-                    .map(|(a, b)| a == b)
-                    .all(|v| v)
+                a.iter().zip(b.iter()).map(|(a, b)| a == b).all(|v| v)
             })
             .all(|v| v)
     }
@@ -147,31 +152,35 @@ impl<const WIDTH: usize, const HEIGHT: usize> fmt::Debug for Board<WIDTH, HEIGHT
             f.write_char('\n')?;
 
             for cell in row {
-                write!(f, "({}, {}), ",
-                    if cell.is_alive() {"t"} else {"f"},
+                write!(
+                    f,
+                    "({}, {}), ",
+                    if cell.is_alive() { "t" } else { "f" },
                     cell.neighbour_count()
                 )?;
             }
         }
-        
+
         Ok(())
     }
 }
 
 fn get_adjacents(to_x: usize, to_y: usize) -> impl Iterator<Item = (usize, usize)> {
-    (-1isize..=1).map(move |y|
-        (-1isize..=1).filter_map(move |x| {
-            if x == 0 && y == 0 {
-                None
-            } else {
-                Some((to_x.checked_add_signed(x)?, to_y.checked_add_signed(y)?))
-            }
-        })).flatten()
+    (-1isize..=1)
+        .map(move |y| {
+            (-1isize..=1).filter_map(move |x| {
+                if x == 0 && y == 0 {
+                    None
+                } else {
+                    Some((to_x.checked_add_signed(x)?, to_y.checked_add_signed(y)?))
+                }
+            })
+        })
+        .flatten()
 }
 
 /// A single game of life cell.
-#[derive(Clone, Copy)]
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Cell(i8);
 
 impl Cell {
@@ -180,8 +189,17 @@ impl Cell {
 
     #[inline]
     pub fn new(is_alive: bool, neighbour_count: i8) -> Self {
-        debug_assert!(neighbour_count <= 8, "integer overflow: neighbour_count (is {}) <= 8", neighbour_count);
-        debug_assert_eq!(neighbour_count & !Self::NEIGHBOUR, 0, "integer underflow: neighbour_count (is {}) cannot be negative", neighbour_count);
+        debug_assert!(
+            neighbour_count <= 8,
+            "integer overflow: neighbour_count (is {}) <= 8",
+            neighbour_count
+        );
+        debug_assert_eq!(
+            neighbour_count & !Self::NEIGHBOUR,
+            0,
+            "integer underflow: neighbour_count (is {}) cannot be negative",
+            neighbour_count
+        );
         Self(neighbour_count | if is_alive { Self::LIVE } else { 0 })
     }
 
@@ -247,7 +265,7 @@ mod tests {
         assert!(!Cell::new(false, 6).next_state());
         assert!(!Cell::new(false, 5).next_state());
         assert!(!Cell::new(false, 4).next_state());
-        
+
         assert!(Cell::new(false, 3).next_state());
 
         assert!(!Cell::new(false, 2).next_state());
@@ -262,7 +280,7 @@ mod tests {
         assert!(!Cell::new(true, 6).next_state());
         assert!(!Cell::new(true, 5).next_state());
         assert!(!Cell::new(true, 4).next_state());
-        
+
         assert!(Cell::new(true, 3).next_state());
         assert!(Cell::new(true, 2).next_state());
 
@@ -284,13 +302,13 @@ mod tests {
             assert_eq!(cell.neighbour_count(), i);
         }
     }
-    
+
     #[test]
     #[should_panic]
     fn test_overflow_cell_constructor() {
         Cell::new(false, 9);
     }
-    
+
     #[test]
     #[should_panic]
     fn test_underflow_cell_constructor() {
@@ -299,15 +317,29 @@ mod tests {
 
     #[test]
     fn test_adjacents() {
-        assert_eq!(get_adjacents(0, 0).collect::<Vec<_>>(), &[        (1, 0),
-                                                              (0, 1), (1, 1)]);
-        
-        assert_eq!(get_adjacents(1, 0).collect::<Vec<_>>(), &[(0, 0),         (2, 0),
-                                                              (0, 1), (1, 1), (2, 1)]);
-        
-        assert_eq!(get_adjacents(1, 1).collect::<Vec<_>>(), &[(0, 0), (1, 0), (2, 0),
-                                                              (0, 1),         (2, 1),
-                                                              (0, 2), (1, 2), (2, 2)]);
+        assert_eq!(
+            get_adjacents(0, 0).collect::<Vec<_>>(),
+            &[(1, 0), (0, 1), (1, 1)]
+        );
+
+        assert_eq!(
+            get_adjacents(1, 0).collect::<Vec<_>>(),
+            &[(0, 0), (2, 0), (0, 1), (1, 1), (2, 1)]
+        );
+
+        assert_eq!(
+            get_adjacents(1, 1).collect::<Vec<_>>(),
+            &[
+                (0, 0),
+                (1, 0),
+                (2, 0),
+                (0, 1),
+                (2, 1),
+                (0, 2),
+                (1, 2),
+                (2, 2)
+            ]
+        );
     }
 
     #[test]
@@ -317,11 +349,7 @@ mod tests {
         expected.make_alive(1, 1);
         expected.make_alive(1, 2);
 
-        let board = Board::from_cells(&[
-            &[0, 1, 0],
-            &[0, 1, 0],
-            &[0, 1, 0],
-        ]);
+        let board = Board::from_cells(&[&[0, 1, 0], &[0, 1, 0], &[0, 1, 0]]);
 
         assert_eq!(expected, board);
 
@@ -330,28 +358,16 @@ mod tests {
         expected.make_alive(1, 1);
         expected.make_alive(2, 1);
 
-        let board = Board::from_cells(&[
-            &[0, 0, 0],
-            &[1, 1, 1],
-            &[0, 0, 0],
-        ]);
+        let board = Board::from_cells(&[&[0, 0, 0], &[1, 1, 1], &[0, 0, 0]]);
 
         assert_eq!(expected, board);
     }
 
     #[test]
     fn test_board_tick() {
-        let board: Board<3, 3> = Board::from_cells(&[
-            &[0, 1, 0],
-            &[0, 1, 0],
-            &[0, 1, 0],
-        ]);
+        let board: Board<3, 3> = Board::from_cells(&[&[0, 1, 0], &[0, 1, 0], &[0, 1, 0]]);
 
-        let expected = Board::from_cells(&[
-            &[0, 0, 0],
-            &[1, 1, 1],
-            &[0, 0, 0],
-        ]);
+        let expected = Board::from_cells(&[&[0, 0, 0], &[1, 1, 1], &[0, 0, 0]]);
 
         assert_eq!(board.tick(), expected)
     }
@@ -359,36 +375,16 @@ mod tests {
     #[test]
     fn test_partial_eq() {
         assert_eq!(
-            Board::<3, 3>::from_cells(&[
-                &[1, 1, 0],
-                &[0, 1, 1],
-                &[0, 1, 0],
-            ]),
-            Board::from_cells(&[
-                &[1, 1, 0],
-                &[0, 1, 1],
-                &[0, 1, 0],
-            ]),
+            Board::<3, 3>::from_cells(&[&[1, 1, 0], &[0, 1, 1], &[0, 1, 0],]),
+            Board::from_cells(&[&[1, 1, 0], &[0, 1, 1], &[0, 1, 0],]),
         );
 
         assert_ne!(
-            Board::<3, 3>::from_cells(&[
-                &[0, 1, 1],
-                &[0, 1, 0],
-                &[1, 1, 1]
-            ]),
-            Board::from_cells(&[
-                &[0, 1, 1],
-                &[0, 1, 1],
-                &[1, 1, 1]
-            ]),
+            Board::<3, 3>::from_cells(&[&[0, 1, 1], &[0, 1, 0], &[1, 1, 1]]),
+            Board::from_cells(&[&[0, 1, 1], &[0, 1, 1], &[1, 1, 1]]),
         );
 
-        let board = Board::<3, 3>::from_cells(&[
-            &[0, 1, 1],
-            &[0, 1, 0],
-            &[1, 1, 1]
-        ]);
+        let board = Board::<3, 3>::from_cells(&[&[0, 1, 1], &[0, 1, 0], &[1, 1, 1]]);
 
         let expected = {
             let mut board = board.clone();
@@ -398,11 +394,7 @@ mod tests {
 
         assert_ne!(board, expected);
 
-        let board = Board::<3, 3>::from_cells(&[
-            &[0, 1, 1],
-            &[0, 1, 0],
-            &[1, 1, 1]
-        ]);
+        let board = Board::<3, 3>::from_cells(&[&[0, 1, 1], &[0, 1, 0], &[1, 1, 1]]);
 
         let expected = {
             let mut board = board.clone();
@@ -417,10 +409,9 @@ mod tests {
     fn test_simulation<const W: usize, const H: usize>(steps: &[&[&[usize]]]) {
         let (initial, steps) = (&steps[0], &steps[1..]);
         let mut board = Board::<W, H>::from_cells(initial);
-        
+
         for next in steps.into_iter() {
             board = board.tick();
-
 
             let expected: Board<W, H> = Board::from_cells(next);
 
@@ -428,14 +419,15 @@ mod tests {
                 print!("[");
 
                 for cell in row {
-                    print!("Cell({}, {})",
-                    if cell.is_alive() { "t" } else { "f" },
-                    cell.neighbour_count(),
-                );
+                    print!(
+                        "Cell({}, {})",
+                        if cell.is_alive() { "t" } else { "f" },
+                        cell.neighbour_count(),
+                    );
 
                     print!(", ");
                 }
-                
+
                 println!("]")
             }
 
@@ -445,19 +437,23 @@ mod tests {
                 print!("[");
 
                 for cell in row {
-                    print!("Cell({}, {})",
-                    if cell.is_alive() { "t" } else { "f" },
-                    cell.neighbour_count(),
-                );
+                    print!(
+                        "Cell({}, {})",
+                        if cell.is_alive() { "t" } else { "f" },
+                        cell.neighbour_count(),
+                    );
 
                     print!(", ");
                 }
-                
+
                 println!("]")
             }
 
             println!("cells: {:?}", board.cells == expected.cells);
-            println!("alive_cells: {:?}", board.alive_cells == expected.alive_cells);
+            println!(
+                "alive_cells: {:?}",
+                board.alive_cells == expected.alive_cells
+            );
 
             assert_eq!(board, expected)
         }
@@ -466,60 +462,21 @@ mod tests {
     #[test]
     fn test_blinker() {
         test_simulation::<3, 3>(&[
-            &[
-                &[0, 1, 0],
-                &[0, 1, 0],
-                &[0, 1, 0],
-            ],
-            &[
-                &[0, 0, 0],
-                &[1, 1, 1],
-                &[0, 0, 0],
-            ],
-            &[
-                &[0, 1, 0],
-                &[0, 1, 0],
-                &[0, 1, 0],
-            ],
-            &[
-                &[0, 0, 0],
-                &[1, 1, 1],
-                &[0, 0, 0],
-            ],
+            &[&[0, 1, 0], &[0, 1, 0], &[0, 1, 0]],
+            &[&[0, 0, 0], &[1, 1, 1], &[0, 0, 0]],
+            &[&[0, 1, 0], &[0, 1, 0], &[0, 1, 0]],
+            &[&[0, 0, 0], &[1, 1, 1], &[0, 0, 0]],
         ]);
     }
 
     #[test]
     fn test_glider() {
         test_simulation::<4, 4>(&[
-            &[
-                &[1, 0, 0],
-                &[0, 1, 1],
-                &[1, 1, 0],
-            ],
-            &[
-                &[0, 1, 0],
-                &[0, 0, 1],
-                &[1, 1, 1],
-            ],
-            &[
-                &[0, 0, 0],
-                &[1, 0, 1],
-                &[0, 1, 1],
-                &[0, 1, 0],
-            ],
-            &[
-                &[0, 0, 0],
-                &[0, 0, 1],
-                &[1, 0, 1],
-                &[0, 1, 1],
-            ],
-            &[
-                &[0, 0, 0, 0],
-                &[0, 1, 0, 0],
-                &[0, 0, 1, 1],
-                &[0, 1, 1, 0],
-            ],
+            &[&[1, 0, 0], &[0, 1, 1], &[1, 1, 0]],
+            &[&[0, 1, 0], &[0, 0, 1], &[1, 1, 1]],
+            &[&[0, 0, 0], &[1, 0, 1], &[0, 1, 1], &[0, 1, 0]],
+            &[&[0, 0, 0], &[0, 0, 1], &[1, 0, 1], &[0, 1, 1]],
+            &[&[0, 0, 0, 0], &[0, 1, 0, 0], &[0, 0, 1, 1], &[0, 1, 1, 0]],
         ])
     }
 }
