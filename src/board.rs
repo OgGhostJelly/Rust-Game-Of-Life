@@ -5,6 +5,8 @@ use std::{
 
 use rand::{rngs::ThreadRng, Rng};
 
+use crate::game_context::GameOfLifeBoard;
+
 #[derive(Clone)]
 pub struct Board<const WIDTH: usize, const HEIGHT: usize> {
     cells: Box<[[Cell; WIDTH]; HEIGHT]>,
@@ -111,6 +113,20 @@ impl<const WIDTH: usize, const HEIGHT: usize> Board<WIDTH, HEIGHT> {
 
             self.cells[other_y][other_x].0 += 1
         }
+    }
+}
+
+impl<const WIDTH: usize, const HEIGHT: usize> GameOfLifeBoard for Board<WIDTH, HEIGHT> {
+    fn alive_cells(&self) -> &[(usize, usize)] {
+        &self.alive_cells
+    }
+
+    fn tick(&self) -> Self {
+        self.tick()
+    }
+
+    fn size(&self) -> Option<(usize, usize)> {
+        Some((WIDTH, HEIGHT))
     }
 }
 

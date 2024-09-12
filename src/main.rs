@@ -5,7 +5,7 @@ use std::{
 
 use board::Board;
 use colored::Colorize;
-use game_context::RenderContext;
+use game_context::{GameOfLifeBoard, RenderContext};
 use rand::thread_rng;
 use sdl2::event::Event;
 
@@ -28,7 +28,7 @@ fn main() -> Result<(), String> {
     let video_subsystem = sdl_context.video()?;
 
     let mut canvas = video_subsystem
-        .window("The Game of Life - Rust", 480, 480)
+        .window("The Game of Life - Rust", 480 * 2, 480 * 2)
         .resizable()
         .build()
         .expect("could not initialize video subsystem")
