@@ -9,25 +9,26 @@ use sdl2::{
     render::WindowCanvas,
 };
 
-use crate::board;
-
-pub trait GameOfLifeBoard {
-    fn alive_cells(&self) -> impl Iterator<Item = (usize, usize)>;
-    fn width(&self) -> usize;
-    fn height(&self) -> usize;
+pub trait GameOfLifeBoard: Clone {
+    fn alive_cells(&self) -> &[(usize, usize)];
+    fn tick(&self) -> Self;
+    fn size(&self) -> Option<(usize, usize)>;
 }
 
-impl<const WIDTH: usize, const HEIGHT: usize> GameOfLifeBoard for board::Board<WIDTH, HEIGHT> {
-    fn alive_cells(&self) -> impl Iterator<Item = (usize, usize)> {
-        self.alive_cells().iter().cloned()
+#[derive(Clone, Copy)]
+pub struct EmptyBoard;
+
+impl GameOfLifeBoard for EmptyBoard {
+    fn alive_cells(&self) -> &[(usize, usize)] {
+        &[]
     }
 
-    fn width(&self) -> usize {
-        WIDTH
+    fn tick(&self) -> Self {
+        Self
     }
 
-    fn height(&self) -> usize {
-        HEIGHT
+    fn size(&self) -> Option<(usize, usize)> {
+        None
     }
 }
 
@@ -126,8 +127,10 @@ impl RenderContext {
         x: f32,
         y: f32,
     ) -> (f32, f32) {
-        let center_grid_x = board.width() as f32 / 2.0;
-        let center_grid_y = board.height() as f32 / 2.0;
+        let (center_grid_x, center_grid_y) = match board.size() {
+            Some((x, y)) => (x as f32  / 2.0, y as f32 / 2.0),
+            None => (0.0, 0.0),
+        };
 
         let (center_canvas_x, center_canvas_y) = match canvas.output_size() {
             Ok((x, y)) => (x, y),
@@ -175,8 +178,12 @@ impl RenderContext {
     }
 
     pub fn draw_border<B: GameOfLifeBoard>(&self, board: &B, canvas: &mut WindowCanvas) {
+        let Some((board_width, board_height)) = board.size() else {
+            return;
+        };
+
         let top_left = self.tile_to_screen_point(board, canvas, 0, 0);
-        let bottom_right = self.tile_to_screen_point(board, canvas, board.width(), board.height());
+        let bottom_right = self.tile_to_screen_point(board, canvas, board_width, board_height);
         let top_right = FPoint::new(bottom_right.x, top_left.y);
         let bottom_left = FPoint::new(top_left.x, bottom_right.y);
 
@@ -193,7 +200,7 @@ impl RenderContext {
 
         for (x, y) in board.alive_cells() {
             canvas.set_draw_color(Color::WHITE);
-            let ret = canvas.draw_frect(self.tile_to_screen_rect(board, canvas, x, y));
+            let ret = canvas.draw_frect(self.tile_to_screen_rect(board, canvas, *x, *y));
             #[cfg(debug_assertions)]
             if let Err(e) = ret {
                 eprintln!(

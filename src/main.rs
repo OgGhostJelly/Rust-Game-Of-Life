@@ -3,10 +3,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use board::Board;
 use colored::Colorize;
-use game_context::RenderContext;
-use rand::thread_rng;
+use game_context::{EmptyBoard, GameOfLifeBoard, RenderContext};
 use sdl2::event::Event;
 
 mod board;
@@ -38,7 +36,7 @@ fn main() -> Result<(), String> {
 
     // Initialize Game
 
-    let mut board = Board::<1000, 1000>::rand(&mut thread_rng(), 0.5);
+    let mut board = EmptyBoard; //;Board::<1000, 1000>::rand(&mut thread_rng(), 0.5);
     let draw_board = Arc::new(std::sync::Mutex::new(board.clone()));
     let draw_board_ref = draw_board.clone();
 
